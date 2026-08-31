@@ -1,0 +1,34 @@
+{
+	"$schema": "https://biomejs.dev/schemas/2.5.11/schema.json",
+	"assist": {
+		"enabled": true
+	},
+	"linter": {
+		"enabled": true,
+		"rules": {
+			"style": {
+				// Named exports improve codebase searchability (ripgrep can locate `export const Foo`
+				// and all `import { Foo }` sites) and make automated refactoring more reliable.
+				"noDefaultExport": "error"
+			}
+		}
+	},
+	"formatter": {
+		"enabled": true,
+		"indentStyle": "tab"
+	},
+	"overrides": [
+		{
+			// Eval files export their definition as the default export by convention.
+			// *.config.ts/js included for tool configs that require a default export.
+			"includes": ["**/*.eval.ts", "**/*.config.ts", "**/*.config.js"],
+			"linter": {
+				"rules": {
+					"style": {
+						"noDefaultExport": "off"
+					}
+				}
+			}
+		}
+	]
+}
