@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$repo_root"
+
+printf 'Using Node %s and npm %s\n' "$(node --version)" "$(npm --version)"
+printf 'Installing npm dependencies...\n'
+time npm ci --no-audit --no-fund
