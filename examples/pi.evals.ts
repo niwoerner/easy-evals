@@ -11,10 +11,11 @@ const judgePrompt =
 evals.define({
 	name: "hello-pi",
 	run: {
-		cmd: `pi -p --model $model "${runPrompt}"`,
-		model: [
-			"openai-codex/gpt-5.6-luna:medium",
-			"openai-codex/gpt-5.6-terra:medium",
+		agent: "pi",
+		cmd: `pi -p --model $model:$thinkingLevel "${runPrompt}"`,
+		modelVariants: [
+			{ model: "openai-codex/gpt-5.6-luna", thinkingLevel: "medium" },
+			{ model: "openai-codex/gpt-5.6-terra", thinkingLevel: "high" },
 		],
 	},
 	judge: {

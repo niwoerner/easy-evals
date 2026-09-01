@@ -1,27 +1,39 @@
-export interface ExecResult {
+export interface CommandResult {
 	stdout: string;
 	stderr: string;
 	exitCode: number;
 }
 
-/** Runs a bash command in the current working directory, streaming its output. */
-export type Exec = (cmd: string) => Promise<ExecResult>;
+/** Runs a bash command in the current model variant's working directory. */
+export type RunCommand = (cmd: string) => Promise<CommandResult>;
+
+export interface ModelVariant {
+	model: string;
+	thinkingLevel: string;
+}
 
 export interface Eval {
 	name: string;
+	/** A fresh copy of source is created for each model variant. */
+	workspace?: {
+		source: string | URL;
+		/** Delete each workspace after judging. Defaults to false. */
+		cleanup?: boolean;
+	};
 	run: {
-		/** Bash command. $model is replaced with the model field. */
+		/** Agent name used to identify the run workspace. */
+		agent: string;
+		/** Bash command. $model and $thinkingLevel are replaced. */
 		cmd: string;
-		/** Passed to the CLI verbatim. An array creates one run per entry. */
-		model: string | string[];
+		modelVariants: ModelVariant[];
 	};
 	judge: {
 		/** Bash command. $model is replaced with the model field. */
 		cmd: string;
 		model: string;
 	};
-	/** TypeScript hook before the run cmd. The return value is ignored. */
-	beforeRun?(exec: Exec): void | Promise<void>;
-	/** TypeScript hook after the run cmd, before the judge. The return value is ignored. */
-	afterRun?(exec: Exec): void | Promise<void>;
+	/** TypeScript hook before each model variant's cmd. The return value is ignored. */
+	beforeRun?(runCommand: RunCommand): void | Promise<void>;
+	/** TypeScript hook after each run cmd, before the judge. The return value is ignored. */
+	afterRun?(runCommand: RunCommand): void | Promise<void>;
 }

@@ -23,15 +23,22 @@ await evals.run("fix-flaky");   // one eval by name
 await evals.runAll();           // every eval, in definition order
 ```
 
-An eval is a name, a run command (which carries its own prompt), a judge, and two optional TypeScript hooks:
+An eval is a name, an optional mirrored workspace, a run command (which carries its own prompt), a judge, and two optional TypeScript hooks:
 
 ```ts
 evals.define({
 	name: "fix-flaky",
+	workspace: {
+		source: new URL("./fixtures/fix-flaky/", import.meta.url),
+	},
 
 	run: {
-		cmd: `claude -p --model $model --effort high "Find and fix the flaky test."`,
-		model: ["opus-4.5", "sonnet-4.5"],
+		agent: "claude",
+		cmd: `claude -p --model $model --effort $thinkingLevel "Find and fix the flaky test."`,
+		modelVariants: [
+			{ model: "opus-4.5", thinkingLevel: "high" },
+			{ model: "sonnet-4.5", thinkingLevel: "medium" },
+		],
 	},
 
 	judge: {
@@ -39,24 +46,28 @@ evals.define({
 		model: "gpt-5.6-sol",
 	},
 
-	beforeRun: async (exec) => {
-		await exec("bun install");
+	beforeRun: async (runCommand) => {
+		await runCommand("bun install");
 	},
-	afterRun: async (exec) => {
-		await exec("bun test");
+	afterRun: async (runCommand) => {
+		await runCommand("bun test");
 	},
 });
 ```
 
+### Workspaces
+
+When `workspace` is set, its `source` is copied into a fresh workspace for each model variant. Hooks, the run command, and the judge execute there without changing the source.
+
+Workspaces are retained under `.easy-evals/runs` by default. Set `cleanup: true` to delete them after judging. String sources resolve from the current directory; use `URL` for paths relative to the evals file.
+
+`beforeRun` and `afterRun` receive `runCommand`, bound to the current model variant's workspace.
+
 ### Templating
 
-`run` and `judge` share one shape and one mechanism: `$model` in the cmd is replaced with the `model` field, which is otherwise passed to the CLI verbatim.
-
-An **array** of models on `run` creates one run per entry, executed sequentially. Everything else — thinking levels, efforts, flags — lives in the cmd string, where plain TypeScript template literals and consts cover reuse.
+Each model variant runs sequentially with `$model` and `$thinkingLevel` substituted in `run.cmd`. The judge runs afterward in the same workspace, with its model substituted for `$model` in `judge.cmd`.
 
 Unknown `$` tokens (like `$HOME`) are left for bash.
-
-The judge runs in the eval's directory after each run entry; whatever it outputs is the output of the eval.
 
 ## Running
 

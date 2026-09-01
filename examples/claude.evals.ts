@@ -10,8 +10,9 @@ const judgePrompt =
 evals.define({
 	name: "hello-claude",
 	run: {
-		cmd: `claude -p --model $model --effort high --permission-mode acceptEdits "${runPrompt}"`,
-		model: "opus",
+		agent: "claude",
+		cmd: `claude -p --model $model --effort $thinkingLevel --permission-mode acceptEdits "${runPrompt}"`,
+		modelVariants: [{ model: "opus", thinkingLevel: "high" }],
 	},
 	judge: {
 		cmd: `claude -p --model $model --effort low "${judgePrompt}"`,
