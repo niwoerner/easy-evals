@@ -52,7 +52,13 @@ export class Evals {
 					}
 
 					try {
-						if (workspace) await mirrorWorkspace(workspace.source, cwd);
+						if (workspace) {
+							if (workspace.source) {
+								await mirrorWorkspace(workspace.source, cwd);
+							} else {
+								await mkdir(cwd, { recursive: true });
+							}
+						}
 						const runCommand: RunCommand = (cmd) => executeCommand(cmd, cwd);
 
 						console.log(

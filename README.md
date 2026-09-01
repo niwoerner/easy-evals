@@ -57,7 +57,7 @@ evals.define({
 
 ### Workspaces
 
-When `workspace` is set, its `source` is copied into a fresh workspace for each model variant. Hooks, the run command, and the judge execute there without changing the source.
+When `workspace` is set, a fresh workspace is created for each model variant. If a `source` is given, it is copied in; omit it (`workspace: {}`) to start from an empty directory. Hooks, the run command, and the judge execute there without changing the source.
 
 Workspaces are retained under `.easy-evals/runs` by default. Set `cleanup: true` to delete them after judging. String sources resolve from the current directory; use `URL` for paths relative to the evals file.
 

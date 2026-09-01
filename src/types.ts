@@ -14,9 +14,10 @@ export interface ModelVariant {
 
 export interface Eval {
 	name: string;
-	/** A fresh copy of source is created for each model variant. */
+	/** A fresh workspace directory is created for each model variant. */
 	workspace?: {
-		source: string | URL;
+		/** Copied into each workspace. Omit to start from an empty directory. */
+		source?: string | URL;
 		/** Delete each workspace after judging. Defaults to false. */
 		cleanup?: boolean;
 	};

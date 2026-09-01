@@ -147,6 +147,64 @@ describe("Evals", () => {
 		}
 	});
 
+	it("creates fresh empty workspaces when workspace has no source", async () => {
+		const workspaces: string[] = [];
+		try {
+			await new Evals()
+				.define({
+					name: "sourceless",
+					workspace: {},
+					run: {
+						agent: "test",
+						cmd: "true",
+						modelVariants: [
+							{ model: "a", thinkingLevel: "none" },
+							{ model: "b", thinkingLevel: "none" },
+						],
+					},
+					judge,
+					beforeRun: async (runCommand) => {
+						const cwd = (await runCommand("pwd")).stdout.trim();
+						workspaces.push(cwd);
+						expect((await runCommand("ls -A")).stdout).toBe("");
+					},
+				})
+				.run("sourceless");
+
+			expect(workspaces).toHaveLength(2);
+			expect(new Set(workspaces).size).toBe(2);
+			const runDir = dirname(dirname(workspaces[0] ?? ""));
+			expect(runDir.startsWith(resolve(".easy-evals/runs"))).toBe(true);
+			expect(workspaces.map((cwd) => relative(runDir, cwd))).toEqual([
+				"sourceless/test-a-none",
+				"sourceless/test-b-none",
+			]);
+			for (const cwd of workspaces) expect(existsSync(cwd)).toBe(true);
+		} finally {
+			if (workspaces[0])
+				rmSync(dirname(dirname(workspaces[0])), {
+					recursive: true,
+					force: true,
+				});
+		}
+	});
+
+	it("removes a sourceless workspace when cleanup is true", async () => {
+		let cwd = "";
+		await new Evals()
+			.define({
+				...helloDef,
+				workspace: { cleanup: true },
+				beforeRun: async (runCommand) => {
+					cwd = (await runCommand("pwd")).stdout.trim();
+				},
+			})
+			.run("hello");
+		expect(cwd).not.toBe("");
+		expect(existsSync(cwd)).toBe(false);
+		expect(existsSync(dirname(dirname(cwd)))).toBe(false);
+	});
+
 	it("removes the workspace when cleanup is true", async () => {
 		const source = mkdtempSync(join(tmpdir(), "easy-evals-cleanup-"));
 		let cwd = "";
