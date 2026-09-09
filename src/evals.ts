@@ -1,5 +1,6 @@
 import { spawn } from "node:child_process";
-import { mkdir, mkdtemp } from "node:fs/promises";
+import { randomInt } from "node:crypto";
+import { mkdir } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import type { CommandResult, Eval, RunCommand } from "./types.ts";
 import { mirrorWorkspace, removeWorkspace } from "./workspace.ts";
@@ -34,21 +35,18 @@ export class Evals {
 	}
 
 	private async execute(evalDefs: readonly Eval[]): Promise<void> {
-		let runDir: string | undefined;
-		let retainRunDir = false;
-		try {
-			for (const evalDef of evalDefs) {
+		for (const evalDef of evalDefs) {
+			let runDir: string | undefined;
+			try {
 				for (const modelVariant of evalDef.run.modelVariants) {
 					const workspace = evalDef.workspace;
 					let cwd = process.cwd();
 					if (workspace) {
-						runDir ??= await createRunDirectory();
+						runDir ??= await createRunDirectory(evalDef.name);
 						cwd = join(
 							runDir,
-							sanitizePathSegment(evalDef.name),
-							`${sanitizePathSegment(evalDef.run.agent)}-${sanitizePathSegment(modelVariant.model)}-${sanitizePathSegment(modelVariant.thinkingLevel)}`,
+							`${sanitizePathSegment(modelVariant.model)}_${sanitizePathSegment(modelVariant.thinkingLevel)}`,
 						);
-						if (!workspace.cleanup) retainRunDir = true;
 					}
 
 					try {
@@ -80,9 +78,9 @@ export class Evals {
 						if (workspace?.cleanup) await removeWorkspace(cwd);
 					}
 				}
+			} finally {
+				if (runDir && evalDef.workspace?.cleanup) await removeWorkspace(runDir);
 			}
-		} finally {
-			if (runDir && !retainRunDir) await removeWorkspace(runDir);
 		}
 	}
 }
@@ -109,14 +107,21 @@ const executeCommand = (cmd: string, cwd: string) =>
 		);
 	});
 
-async function createRunDirectory(): Promise<string> {
-	const runsDir = resolve(EASY_EVALS_DIR);
+async function createRunDirectory(name: string): Promise<string> {
+	const runsDir = resolve(EASY_EVALS_DIR, sanitizePathSegment(name));
 	await mkdir(runsDir, { recursive: true });
-	const timestamp = new Date()
-		.toISOString()
-		.replaceAll(":", "-")
-		.replace(".", "-");
-	return mkdtemp(join(runsDir, `${timestamp}-`));
+	const date = new Date().toISOString().slice(0, 10);
+	const timestamp = `${date.slice(5, 7)}-${date.slice(8, 10)}-${date.slice(0, 4)}`;
+	while (true) {
+		const id = randomInt(1_000_000).toString().padStart(6, "0");
+		const runDir = join(runsDir, `${timestamp}_${id}`);
+		try {
+			await mkdir(runDir);
+			return runDir;
+		} catch (error) {
+			if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error;
+		}
+	}
 }
 
 function sanitizePathSegment(value: string): string {

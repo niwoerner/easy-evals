@@ -121,16 +121,19 @@ describe("Evals", () => {
 			expect(outputs).toEqual(["a/model/high", "b:model/low", "c/medium"]);
 			const firstWorkspace = workspaces[0];
 			if (!firstWorkspace) throw new Error("first workspace was not created");
-			const runDir = dirname(dirname(firstWorkspace));
-			expect(workspaces.map((cwd) => relative(runDir, cwd))).toEqual([
-				"first-eval/test-agent-a-model-high",
-				"first-eval/test-agent-b-model-low",
-				"second/test-agent-c-medium",
+			const runDir = dirname(firstWorkspace);
+			expect(workspaces.map((cwd) => basename(cwd))).toEqual([
+				"a-model_high",
+				"b-model_low",
+				"c_medium",
 			]);
-			expect(runDir.startsWith(resolve(".easy-evals/runs"))).toBe(true);
-			expect(basename(runDir)).toMatch(
-				/^\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}-\d{3}Z-[a-zA-Z0-9]{6}$/,
-			);
+			expect(dirname(workspaces[1] ?? "")).toBe(runDir);
+			expect(
+				workspaces.map((cwd) =>
+					relative(resolve(".easy-evals/runs"), dirname(dirname(cwd))),
+				),
+			).toEqual(["first-eval", "first-eval", "second"]);
+			expect(basename(runDir)).toMatch(/^\d{2}-\d{2}-\d{4}_\d{6}$/);
 			for (const cwd of workspaces) {
 				expect(existsSync(cwd)).toBe(true);
 				expect(existsSync(join(cwd, ".easy-evals"))).toBe(false);
@@ -138,8 +141,8 @@ describe("Evals", () => {
 			expect(existsSync(join(source, "generated.txt"))).toBe(false);
 			expect(readFileSync(join(source, "seed.txt"), "utf8")).toBe("seed");
 		} finally {
-			if (workspaces[0])
-				rmSync(dirname(dirname(workspaces[0])), {
+			for (const cwd of workspaces)
+				rmSync(dirname(cwd), {
 					recursive: true,
 					force: true,
 				});
@@ -173,16 +176,16 @@ describe("Evals", () => {
 
 			expect(workspaces).toHaveLength(2);
 			expect(new Set(workspaces).size).toBe(2);
-			const runDir = dirname(dirname(workspaces[0] ?? ""));
+			const runDir = dirname(workspaces[0] ?? "");
 			expect(runDir.startsWith(resolve(".easy-evals/runs"))).toBe(true);
 			expect(workspaces.map((cwd) => relative(runDir, cwd))).toEqual([
-				"sourceless/test-a-none",
-				"sourceless/test-b-none",
+				"a_none",
+				"b_none",
 			]);
 			for (const cwd of workspaces) expect(existsSync(cwd)).toBe(true);
 		} finally {
-			if (workspaces[0])
-				rmSync(dirname(dirname(workspaces[0])), {
+			for (const cwd of workspaces)
+				rmSync(dirname(cwd), {
 					recursive: true,
 					force: true,
 				});
@@ -202,7 +205,7 @@ describe("Evals", () => {
 			.run("hello");
 		expect(cwd).not.toBe("");
 		expect(existsSync(cwd)).toBe(false);
-		expect(existsSync(dirname(dirname(cwd)))).toBe(false);
+		expect(existsSync(dirname(cwd))).toBe(false);
 	});
 
 	it("removes the workspace when cleanup is true", async () => {
@@ -220,7 +223,7 @@ describe("Evals", () => {
 				.run("hello");
 			expect(cwd).not.toBe("");
 			expect(existsSync(cwd)).toBe(false);
-			expect(existsSync(dirname(dirname(cwd)))).toBe(false);
+			expect(existsSync(dirname(cwd))).toBe(false);
 		} finally {
 			rmSync(source, { recursive: true, force: true });
 		}
@@ -243,7 +246,7 @@ describe("Evals", () => {
 			await expect(run).rejects.toThrow("hook failed");
 			expect(cwd).not.toBe("");
 			expect(existsSync(cwd)).toBe(false);
-			expect(existsSync(dirname(dirname(cwd)))).toBe(false);
+			expect(existsSync(dirname(cwd))).toBe(false);
 		} finally {
 			rmSync(source, { recursive: true, force: true });
 		}

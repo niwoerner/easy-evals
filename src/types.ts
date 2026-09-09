@@ -22,7 +22,7 @@ export interface Eval {
 		cleanup?: boolean;
 	};
 	run: {
-		/** Agent name used to identify the run workspace. */
+		/** Agent name shown in run logs. */
 		agent: string;
 		/** Bash command. $model and $thinkingLevel are replaced. */
 		cmd: string;
