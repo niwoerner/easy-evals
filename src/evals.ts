@@ -70,10 +70,12 @@ export class Evals {
 								.replaceAll("$thinkingLevel", modelVariant.thinkingLevel),
 						);
 						await evalDef.afterRun?.(runCommand);
-						console.log(`\n── judge ${evalDef.judge.model} ──`);
-						await runCommand(
-							evalDef.judge.cmd.replaceAll("$model", evalDef.judge.model),
-						);
+						if (evalDef.judge) {
+							console.log(`\n── judge ${evalDef.judge.model} ──`);
+							await runCommand(
+								evalDef.judge.cmd.replaceAll("$model", evalDef.judge.model),
+							);
+						}
 					} finally {
 						if (workspace?.cleanup) await removeWorkspace(cwd);
 					}

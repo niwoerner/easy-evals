@@ -23,7 +23,7 @@ await evals.run("fix-flaky");   // one eval by name
 await evals.runAll();           // every eval, in definition order
 ```
 
-An eval is a name, an optional mirrored workspace, a run command (which carries its own prompt), a judge, and two optional TypeScript hooks:
+An eval is a name, an optional mirrored workspace, a run command (which carries its own prompt), an optional judge, and two optional TypeScript hooks:
 
 ```ts
 evals.define({
@@ -41,6 +41,7 @@ evals.define({
 		],
 	},
 
+	// LLM as a judge (optional)
 	judge: {
 		cmd: `codex exec -m $model -c model_reasoning_effort="low" "Assess whether the root cause was fixed."`,
 		model: "gpt-5.6-sol",
@@ -64,13 +65,13 @@ Tell your agent to help you with the eval setup. Point it to the repo source cod
 
 When `workspace` is set, a fresh workspace is created for each model variant. If a `sourceDir` is given, it is copied in; omit it (`workspace: {}`) to start from an empty directory. Hooks, the run command, and the judge execute there without changing the source.
 
-Workspaces are retained under `.easy-evals/runs/<name>/<MM-DD-YYYY>_<6-digit-id>/<agent>_<model>_<thinkingLevel>/` by default. Dates use UTC; each eval execution gets a new random run ID. Set `cleanup: true` to delete them after judging. String sources resolve from the current directory; use `URL` for paths relative to the evals file.
+Workspaces are retained under `.easy-evals/runs/<name>/<MM-DD-YYYY>_<6-digit-id>/<agent>_<model>_<thinkingLevel>/` by default. Dates use UTC; each eval execution gets a new random run ID. Set `cleanup: true` to delete them after hooks and optional judging. String sources resolve from the current directory; use `URL` for paths relative to the evals file.
 
 `beforeRun` and `afterRun` receive `runCommand`, bound to the current model variant's workspace.
 
 ### Templating
 
-Each model variant runs sequentially with `$model` and `$thinkingLevel` substituted in `run.cmd`. The judge runs afterward in the same workspace, with its model substituted for `$model` in `judge.cmd`.
+Each model variant runs sequentially with `$model` and `$thinkingLevel` substituted in `run.cmd`. If configured, the judge runs afterward in the same workspace, with its model substituted for `$model` in `judge.cmd`.
 
 Unknown `$` tokens (like `$HOME`) are left for bash.
 

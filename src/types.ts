@@ -18,7 +18,7 @@ export interface Eval {
 	workspace?: {
 		/** Copied into each workspace. Omit to start from an empty directory. */
 		sourceDir?: string | URL;
-		/** Delete each workspace after judging. Defaults to false. */
+		/** Delete each workspace after hooks and optional judging. Defaults to false. */
 		cleanup?: boolean;
 	};
 	run: {
@@ -28,7 +28,7 @@ export interface Eval {
 		cmd: string;
 		modelVariants: ModelVariant[];
 	};
-	judge: {
+	judge?: {
 		/** Bash command. $model is replaced with the model field. */
 		cmd: string;
 		model: string;

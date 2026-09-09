@@ -7,19 +7,19 @@ description: Set up easy-evals for end users, including agent commands, model va
 
 The source code is public at [niwoerner/easy-evals](https://github.com/niwoerner/easy-evals). When in doubt about the API or runtime behavior, inspect the implementation and tests to ground your answer in code, preferably at the user's installed version.
 
-Install `easy-evals` with the project's package manager (for example, `npm install -D easy-evals`). Use Node.js ≥ 22.18 or Bun to execute the TypeScript eval file. The agent and judge CLIs must be installed and authenticated.
+Install `easy-evals` with the project's package manager (for example, `npm install -D easy-evals`). Use Node.js ≥ 22.18 or Bun to execute the TypeScript eval file. The CLIs you use must be installed and authenticated.
 
-Create an `evals.ts` file that imports `Evals` from `easy-evals`. Define a named task, the agent command and model variants to compare, and a judge command with explicit success criteria. Match commands and model names to the user's chosen CLIs.
+Create an `evals.ts` file that imports `Evals` from `easy-evals`. Define a named task, the agent command and model variants to compare, and optionally a judge command with explicit success criteria. Match commands and model names to the user's chosen CLIs.
 
 ## Lifecycle
 
 Each model variant runs sequentially:
 
-`workspace preparation → beforeRun → run.cmd → afterRun → judge.cmd → optional workspace cleanup`
+`workspace preparation → beforeRun → run.cmd → afterRun → optional judge.cmd → optional workspace cleanup`
 
 - Put eval setup in `beforeRun`: install dependencies, seed data, or prepare services.
 - Put deterministic checks in `afterRun`: tests, assertions, or output validation. It can also perform teardown, but keep files and services needed by the judge available until judging finishes.
-- Use the judge for qualitative assessment with a clear rubric.
+- Invoking a judge is optional. Omit `judge` for deterministic-only evals; add it for qualitative assessment with a clear rubric.
 - Hook `runCommand` calls execute in the variant's working directory and return `{ stdout, stderr, exitCode }`. Check `exitCode` explicitly: nonzero exits do not throw automatically, and hook return values are ignored. Throwing stops the eval before judging and prevents subsequent variants from running.
 - `afterRun` is not guaranteed teardown: a thrown setup or execution error skips it. Use `try/finally` around `evals.runAll()` for resources that must always be released; there is no separate teardown hook.
 
@@ -31,7 +31,7 @@ Recommend a workspace for filesystem-based evals, such as coding tasks, so varia
 - `workspace: {}` starts each variant in an empty directory.
 - Omit `workspace` to run in the current directory, shared by all variants.
 
-Workspaces remain in `.easy-evals/runs/<name>/<MM-DD-YYYY>_<6-digit-id>/<agent>_<model>_<thinkingLevel>/` for inspection. Dates use UTC. Set `workspace.cleanup: true` to remove them after judging or on an error. Workspaces are copied directories, not security sandboxes.
+Workspaces remain in `.easy-evals/runs/<name>/<MM-DD-YYYY>_<6-digit-id>/<agent>_<model>_<thinkingLevel>/` for inspection. Dates use UTC. Set `workspace.cleanup: true` to remove them after hooks and optional judging, or on an error. Workspaces are copied directories, not security sandboxes.
 
 ## Example
 

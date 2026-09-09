@@ -30,6 +30,37 @@ describe("Evals", () => {
 		await expect(evals.run("hello")).resolves.toBeUndefined();
 	});
 
+	it("runs hooks and cleans up every variant without a judge", async () => {
+		const workspaces: string[] = [];
+		const outputs: string[] = [];
+		await new Evals()
+			.define({
+				name: "without-judge",
+				workspace: { cleanup: true },
+				run: {
+					agent: "test",
+					cmd: "echo $model >> result.txt",
+					modelVariants: [
+						{ model: "a", thinkingLevel: "none" },
+						{ model: "b", thinkingLevel: "none" },
+					],
+				},
+				beforeRun: async (runCommand) => {
+					workspaces.push((await runCommand("pwd")).stdout.trim());
+					await runCommand("echo setup > result.txt");
+				},
+				afterRun: async (runCommand) => {
+					outputs.push((await runCommand("cat result.txt")).stdout);
+				},
+			})
+			.runAll();
+		expect(outputs).toEqual(["setup\na\n", "setup\nb\n"]);
+		for (const cwd of workspaces) {
+			expect(existsSync(cwd)).toBe(false);
+			expect(existsSync(dirname(cwd))).toBe(false);
+		}
+	});
+
 	it("templates and judges each model variant", async () => {
 		const file = `${tmpdir()}/easy-evals-expansion-${process.pid}`;
 		const evals = new Evals().define({
