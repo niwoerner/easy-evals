@@ -11,6 +11,7 @@ const judgePrompt =
 evals.define({
 	name: "hello-codex",
 	run: {
+		mode: "cli",
 		agent: "codex",
 		cmd: `codex exec -m $model -c model_reasoning_effort="$thinkingLevel" --sandbox workspace-write --skip-git-repo-check "${runPrompt}"`,
 		modelVariants: [{ model: "gpt-5.6-luna", thinkingLevel: "high" }],

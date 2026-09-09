@@ -36,16 +36,21 @@ export class Evals {
 
 	private async execute(evalDefs: readonly Eval[]): Promise<void> {
 		for (const evalDef of evalDefs) {
+			const run = evalDef.run;
 			let runDir: string | undefined;
 			try {
-				for (const modelVariant of evalDef.run.modelVariants) {
+				for (const modelVariant of run.mode === "cli"
+					? run.modelVariants
+					: [undefined]) {
 					const workspace = evalDef.workspace;
 					let cwd = process.cwd();
 					if (workspace) {
 						runDir ??= await createRunDirectory(evalDef.name);
 						cwd = join(
 							runDir,
-							`${sanitizePathSegment(evalDef.run.agent)}_${sanitizePathSegment(modelVariant.model)}_${sanitizePathSegment(modelVariant.thinkingLevel)}`,
+							run.mode === "cli" && modelVariant
+								? `${sanitizePathSegment(run.agent)}_${sanitizePathSegment(modelVariant.model)}_${sanitizePathSegment(modelVariant.thinkingLevel)}`
+								: "workspace",
 						);
 					}
 
@@ -60,15 +65,20 @@ export class Evals {
 						const runCommand: RunCommand = (cmd) => executeCommand(cmd, cwd);
 
 						console.log(
-							`${evalDef.name} — ${evalDef.run.agent}/${modelVariant.model}/${modelVariant.thinkingLevel}\n${cwd}`,
+							`${evalDef.name} — ${run.mode === "cli" && modelVariant ? `${run.agent}/${modelVariant.model}/${modelVariant.thinkingLevel}` : "code"}\n${cwd}`,
 						);
 						await evalDef.beforeRun?.(runCommand);
-						console.log(`\n── run ${modelVariant.model} ──`);
-						await runCommand(
-							evalDef.run.cmd
-								.replaceAll("$model", modelVariant.model)
-								.replaceAll("$thinkingLevel", modelVariant.thinkingLevel),
-						);
+						if (run.mode === "code") {
+							console.log("\n── run code ──");
+							await run.execute(workspace ? { workspaceDir: cwd } : {});
+						} else if (modelVariant) {
+							console.log(`\n── run ${modelVariant.model} ──`);
+							await runCommand(
+								run.cmd
+									.replaceAll("$model", modelVariant.model)
+									.replaceAll("$thinkingLevel", modelVariant.thinkingLevel),
+							);
+						}
 						await evalDef.afterRun?.(runCommand);
 						if (evalDef.judge) {
 							console.log(`\n── judge ${evalDef.judge.model} ──`);

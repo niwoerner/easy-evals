@@ -7,16 +7,18 @@ import {
 	symlinkSync,
 	writeFileSync,
 } from "node:fs";
+import { appendFile, readdir } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { basename, dirname, join, relative, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
-import { Evals } from "./index.ts";
+import { type Eval, Evals } from "./index.ts";
 
 const judge = { cmd: "echo judged", model: "j" };
 
-const helloDef = {
+const helloDef: Eval = {
 	name: "hello",
 	run: {
+		mode: "cli",
 		agent: "test",
 		cmd: "true",
 		modelVariants: [{ model: "a", thinkingLevel: "none" }],
@@ -38,6 +40,7 @@ describe("Evals", () => {
 				name: "without-judge",
 				workspace: { cleanup: true },
 				run: {
+					mode: "cli",
 					agent: "test",
 					cmd: "echo $model >> result.txt",
 					modelVariants: [
@@ -66,6 +69,7 @@ describe("Evals", () => {
 		const evals = new Evals().define({
 			name: "expansion",
 			run: {
+				mode: "cli",
 				agent: "test",
 				cmd: `echo "run $model $thinkingLevel" >> ${file}`,
 				modelVariants: [
@@ -82,11 +86,111 @@ describe("Evals", () => {
 		rmSync(file);
 	});
 
+	it("awaits a code callback once between hooks and judges in its copied workspace", async () => {
+		const source = mkdtempSync(join(tmpdir(), "easy-evals-code-"));
+		writeFileSync(join(source, "result.txt"), "seed\n");
+		const originalCwd = process.cwd();
+		let cwd = "";
+		let calls = 0;
+		try {
+			await new Evals()
+				.define({
+					name: "code-fixture",
+					workspace: { sourceDir: source },
+					beforeRun: async (runCommand) => {
+						await runCommand("echo before >> result.txt");
+					},
+					run: {
+						mode: "code",
+						execute: async (context) => {
+							calls++;
+							if (!context.workspaceDir)
+								throw new Error("Expected a workspace");
+							cwd = context.workspaceDir;
+							expect(Object.keys(context).sort()).toEqual(["workspaceDir"]);
+							expect(process.cwd()).toBe(originalCwd);
+							await appendFile(
+								join(cwd, "result.txt"),
+								"$model/$thinkingLevel\n",
+							);
+						},
+					},
+					afterRun: async (runCommand) => {
+						await runCommand("echo after >> result.txt");
+					},
+					judge: { cmd: "echo $model >> result.txt", model: "judge" },
+				})
+				.run("code-fixture");
+			expect(calls).toBe(1);
+			expect(basename(cwd)).toBe("workspace");
+			expect(dirname(dirname(cwd))).toBe(
+				resolve(".easy-evals/runs/code-fixture"),
+			);
+			expect(readFileSync(join(cwd, "result.txt"), "utf8")).toBe(
+				"seed\nbefore\n$model/$thinkingLevel\nafter\njudge\n",
+			);
+			expect(readFileSync(join(source, "result.txt"), "utf8")).toBe("seed\n");
+		} finally {
+			if (cwd) rmSync(dirname(cwd), { recursive: true, force: true });
+			rmSync(source, { recursive: true, force: true });
+		}
+	});
+
+	it("runs synchronous code once without a workspaceDir or judge", async () => {
+		let calls = 0;
+		await new Evals()
+			.define({
+				name: "code-current-directory",
+				run: {
+					mode: "code",
+					execute: ({ workspaceDir }) => {
+						calls++;
+						expect(workspaceDir).toBeUndefined();
+					},
+				},
+			})
+			.runAll();
+		expect(calls).toBe(1);
+	});
+
+	it.each([false, true])(
+		"cleans up a code workspace when the callback throws: %s",
+		async (throws) => {
+			let cwd = "";
+			let afterCalled = false;
+			const result = new Evals()
+				.define({
+					name: "code-cleanup",
+					workspace: { cleanup: true },
+					run: {
+						mode: "code",
+						execute: async (context) => {
+							if (!context.workspaceDir)
+								throw new Error("Expected a workspace");
+							cwd = context.workspaceDir;
+							expect(await readdir(cwd)).toEqual([]);
+							if (throws) throw new Error("code failed");
+						},
+					},
+					afterRun: () => {
+						afterCalled = true;
+					},
+				})
+				.runAll();
+			if (throws) await expect(result).rejects.toThrow("code failed");
+			else await expect(result).resolves.toBeUndefined();
+			expect(afterCalled).toBe(!throws);
+			expect(cwd).not.toBe("");
+			expect(existsSync(dirname(cwd))).toBe(false);
+		},
+	);
+
 	it("runs hooks around every model variant", async () => {
 		const order: string[] = [];
 		const evals = new Evals().define({
 			name: "hooks",
 			run: {
+				mode: "cli",
 				agent: "test",
 				cmd: "true",
 				modelVariants: [
@@ -122,6 +226,7 @@ describe("Evals", () => {
 			name,
 			workspace: { sourceDir: source },
 			run: {
+				mode: "cli",
 				agent: "test-agent",
 				cmd: `test ! -e generated.txt && printf '%s' '$model/$thinkingLevel' > generated.txt`,
 				modelVariants,
@@ -189,6 +294,7 @@ describe("Evals", () => {
 					name: "sourceless",
 					workspace: {},
 					run: {
+						mode: "cli",
 						agent: "test",
 						cmd: "true",
 						modelVariants: [

@@ -23,7 +23,7 @@ await evals.run("fix-flaky");   // one eval by name
 await evals.runAll();           // every eval, in definition order
 ```
 
-An eval is a name, an optional mirrored workspace, a run command (which carries its own prompt), an optional judge, and two optional TypeScript hooks:
+An eval is a name, an optional mirrored workspace, a CLI command or code callback, an optional judge, and two optional TypeScript hooks:
 
 ```ts
 evals.define({
@@ -33,6 +33,7 @@ evals.define({
 	},
 
 	run: {
+		mode: "cli",
 		agent: "claude",
 		cmd: `claude -p --model $model --effort $thinkingLevel "Find and fix the flaky test."`,
 		modelVariants: [
@@ -57,21 +58,47 @@ evals.define({
 });
 ```
 
+### Modes
+
+Set `run.mode` explicitly:
+
+- **`cli`** simplifies constructing and comparing CLI agent runs: provide `agent`, `cmd`, and `modelVariants`. The command runs once per variant with `$model` and `$thinkingLevel` substituted.
+- **`code`** invokes `execute` once. Call packages or commands directly; your code controls models, loops, and orchestration without a predefined structure.
+
+```ts
+import { writeFile } from "node:fs/promises";
+import { join } from "node:path";
+
+evals.define({
+	name: "write-output",
+	workspace: {},
+	run: {
+		mode: "code",
+		execute: async ({ workspaceDir }) => {
+			if (!workspaceDir) throw new Error("This eval requires a workspace");
+			await writeFile(join(workspaceDir, "output.txt"), "hello");
+		},
+	},
+});
+```
+
+Both modes support `beforeRun` for setup, `afterRun` for deterministic checks or teardown, and an optional judge. Code callbacks are awaited; return values are ignored. Callbacks receive only `workspaceDir`, the absolute workspace path when `workspace` is configured, otherwise `undefined`. The process working directory is unchanged, so pass `workspaceDir` explicitly to package calls. Hook `runCommand` uses the workspace or current directory and returns `{ stdout, stderr, exitCode }`; nonzero exits do not throw automatically. Thrown errors stop the eval and still trigger configured workspace cleanup.
+
 ### Skills
 
 Tell your agent to help you with the eval setup. Point it to the repo source code and/or the [skill](./skills/setup-easy-evals).
- 
+
 ### Workspaces
 
-When `workspace` is set, a fresh workspace is created for each model variant. If a `sourceDir` is given, it is copied in; omit it (`workspace: {}`) to start from an empty directory. Hooks, the run command, and the judge execute there without changing the source.
+When `workspace` is set, a fresh workspace is created per CLI variant or once per code invocation. Workspaces are recommended for filesystem-based evals. If a `sourceDir` is given, it is copied in; omit it (`workspace: {}`) to start from an empty directory. Shell commands from hooks, the run, and the optional judge execute there; code callbacks receive its path as `workspaceDir`.
 
-Workspaces are retained under `.easy-evals/runs/<name>/<MM-DD-YYYY>_<6-digit-id>/<agent>_<model>_<thinkingLevel>/` by default. Dates use UTC; each eval execution gets a new random run ID. Set `cleanup: true` to delete them after hooks and optional judging. String sources resolve from the current directory; use `URL` for paths relative to the evals file.
+Workspaces are retained under `.easy-evals/runs/<name>/<MM-DD-YYYY>_<6-digit-id>/<agent>_<model>_<thinkingLevel>/` by default. Code mode uses `workspace/` in place of `<agent>_<model>_<thinkingLevel>/`. Dates use UTC; each eval execution gets a new random run ID. Set `cleanup: true` to delete them after hooks and optional judging. String sources resolve from the current directory; use `URL` for paths relative to the evals file.
 
-`beforeRun` and `afterRun` receive `runCommand`, bound to the current model variant's workspace.
+Omitting `workspace` uses the current directory. `beforeRun` and `afterRun` receive `runCommand`, bound to the run's working directory.
 
 ### Templating
 
-Each model variant runs sequentially with `$model` and `$thinkingLevel` substituted in `run.cmd`. If configured, the judge runs afterward in the same workspace, with its model substituted for `$model` in `judge.cmd`.
+In CLI mode, each model variant runs sequentially with `$model` and `$thinkingLevel` substituted in `run.cmd`. In either mode, if configured, the judge runs afterward in the same workspace, with its model substituted for `$model` in `judge.cmd`.
 
 Unknown `$` tokens (like `$HOME`) are left for bash.
 

@@ -11,6 +11,7 @@ const judgePrompt =
 evals.define({
 	name: "hello-pi",
 	run: {
+		mode: "cli",
 		agent: "pi",
 		cmd: `pi -p --model $model:$thinkingLevel "${runPrompt}"`,
 		modelVariants: [
