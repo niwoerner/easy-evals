@@ -45,7 +45,7 @@ export class Evals {
 						runDir ??= await createRunDirectory(evalDef.name);
 						cwd = join(
 							runDir,
-							`${sanitizePathSegment(modelVariant.model)}_${sanitizePathSegment(modelVariant.thinkingLevel)}`,
+							`${sanitizePathSegment(evalDef.run.agent)}_${sanitizePathSegment(modelVariant.model)}_${sanitizePathSegment(modelVariant.thinkingLevel)}`,
 						);
 					}
 

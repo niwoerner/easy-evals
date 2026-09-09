@@ -56,11 +56,15 @@ evals.define({
 });
 ```
 
+### Skills
+
+Tell your agent to help you with the eval setup. Point it to the repo source code and/or the [skill](./skills/setup-easy-evals).
+ 
 ### Workspaces
 
 When `workspace` is set, a fresh workspace is created for each model variant. If a `sourceDir` is given, it is copied in; omit it (`workspace: {}`) to start from an empty directory. Hooks, the run command, and the judge execute there without changing the source.
 
-Workspaces are retained under `.easy-evals/runs/<name>/<MM-DD-YYYY>_<6-digit-id>/<model>_<thinkingLevel>/` by default. Dates use UTC; each eval execution gets a new random run ID. Set `cleanup: true` to delete them after judging. String sources resolve from the current directory; use `URL` for paths relative to the evals file.
+Workspaces are retained under `.easy-evals/runs/<name>/<MM-DD-YYYY>_<6-digit-id>/<agent>_<model>_<thinkingLevel>/` by default. Dates use UTC; each eval execution gets a new random run ID. Set `cleanup: true` to delete them after judging. String sources resolve from the current directory; use `URL` for paths relative to the evals file.
 
 `beforeRun` and `afterRun` receive `runCommand`, bound to the current model variant's workspace.
 

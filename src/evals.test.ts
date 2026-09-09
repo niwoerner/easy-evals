@@ -123,9 +123,9 @@ describe("Evals", () => {
 			if (!firstWorkspace) throw new Error("first workspace was not created");
 			const runDir = dirname(firstWorkspace);
 			expect(workspaces.map((cwd) => basename(cwd))).toEqual([
-				"a-model_high",
-				"b-model_low",
-				"c_medium",
+				"test-agent_a-model_high",
+				"test-agent_b-model_low",
+				"test-agent_c_medium",
 			]);
 			expect(dirname(workspaces[1] ?? "")).toBe(runDir);
 			expect(
@@ -179,8 +179,8 @@ describe("Evals", () => {
 			const runDir = dirname(workspaces[0] ?? "");
 			expect(runDir.startsWith(resolve(".easy-evals/runs"))).toBe(true);
 			expect(workspaces.map((cwd) => relative(runDir, cwd))).toEqual([
-				"a_none",
-				"b_none",
+				"test_a_none",
+				"test_b_none",
 			]);
 			for (const cwd of workspaces) expect(existsSync(cwd)).toBe(true);
 		} finally {
