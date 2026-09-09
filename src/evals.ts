@@ -53,8 +53,8 @@ export class Evals {
 
 					try {
 						if (workspace) {
-							if (workspace.source) {
-								await mirrorWorkspace(workspace.source, cwd);
+							if (workspace.sourceDir) {
+								await mirrorWorkspace(workspace.sourceDir, cwd);
 							} else {
 								await mkdir(cwd, { recursive: true });
 							}

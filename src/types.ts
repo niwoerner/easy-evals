@@ -17,7 +17,7 @@ export interface Eval {
 	/** A fresh workspace directory is created for each model variant. */
 	workspace?: {
 		/** Copied into each workspace. Omit to start from an empty directory. */
-		source?: string | URL;
+		sourceDir?: string | URL;
 		/** Delete each workspace after judging. Defaults to false. */
 		cleanup?: boolean;
 	};

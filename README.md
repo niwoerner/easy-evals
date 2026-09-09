@@ -29,7 +29,7 @@ An eval is a name, an optional mirrored workspace, a run command (which carries 
 evals.define({
 	name: "fix-flaky",
 	workspace: {
-		source: new URL("./fixtures/fix-flaky/", import.meta.url),
+		sourceDir: new URL("./fixtures/fix-flaky/", import.meta.url),
 	},
 
 	run: {
@@ -46,6 +46,7 @@ evals.define({
 		model: "gpt-5.6-sol",
 	},
 
+	// Hooks
 	beforeRun: async (runCommand) => {
 		await runCommand("bun install");
 	},
@@ -57,7 +58,7 @@ evals.define({
 
 ### Workspaces
 
-When `workspace` is set, a fresh workspace is created for each model variant. If a `source` is given, it is copied in; omit it (`workspace: {}`) to start from an empty directory. Hooks, the run command, and the judge execute there without changing the source.
+When `workspace` is set, a fresh workspace is created for each model variant. If a `sourceDir` is given, it is copied in; omit it (`workspace: {}`) to start from an empty directory. Hooks, the run command, and the judge execute there without changing the source.
 
 Workspaces are retained under `.easy-evals/runs` by default. Set `cleanup: true` to delete them after judging. String sources resolve from the current directory; use `URL` for paths relative to the evals file.
 

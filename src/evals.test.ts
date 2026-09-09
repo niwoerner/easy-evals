@@ -89,7 +89,7 @@ describe("Evals", () => {
 			modelVariants: { model: string; thinkingLevel: string }[],
 		): Parameters<Evals["define"]>[0] => ({
 			name,
-			workspace: { source },
+			workspace: { sourceDir: source },
 			run: {
 				agent: "test-agent",
 				cmd: `test ! -e generated.txt && printf '%s' '$model/$thinkingLevel' > generated.txt`,
@@ -147,7 +147,7 @@ describe("Evals", () => {
 		}
 	});
 
-	it("creates fresh empty workspaces when workspace has no source", async () => {
+	it("creates fresh empty workspaces when workspace has no sourceDir", async () => {
 		const workspaces: string[] = [];
 		try {
 			await new Evals()
@@ -212,7 +212,7 @@ describe("Evals", () => {
 			await new Evals()
 				.define({
 					...helloDef,
-					workspace: { source, cleanup: true },
+					workspace: { sourceDir: source, cleanup: true },
 					beforeRun: async (runCommand) => {
 						cwd = (await runCommand("pwd")).stdout.trim();
 					},
@@ -233,7 +233,7 @@ describe("Evals", () => {
 			const run = new Evals()
 				.define({
 					...helloDef,
-					workspace: { source, cleanup: true },
+					workspace: { sourceDir: source, cleanup: true },
 					beforeRun: async (runCommand) => {
 						cwd = (await runCommand("pwd")).stdout.trim();
 						throw new Error("hook failed");
